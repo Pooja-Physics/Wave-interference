@@ -1,0 +1,91 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: students
+    // Document ID: {studentId} (matches uid)
+    // Fields:
+    //   - uid: string (required, immutable)
+    //   - name: string (required, max 50 chars)
+    //   - level: string (required)
+    //   - startedAt: timestamp (required, immutable)
+    //   - completedAt: timestamp (optional)
+    //   - scores: map (required)
+    //     - wordScramble: number
+    //     - dragDrop: number
+    //     - mysteryBox: number
+    //     - spotDifference: number
+    //     - conceptCheck: number
+    //     - assessment: number
+    //     - exitTicket: number
+    //   - totalScore: number (required)
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isTeacher() {
+      // Specific teacher email check as per critical directive
+      return isAuthenticated() && 
+             request.auth.token.email == "pooja.naik1109@gmail.com" && 
+             request.auth.token.email_verified == true;
+    }
+
+    function isValidScores(scoresMap) {
+      let allowedKeys = ['wordScramble', 'dragDrop', 'misconception', 'spotDifference', 'waveLab', 'conceptCheck', 'assessment', 'exitTicket'];
+      return scoresMap is map &&
+             scoresMap.keys().hasOnly(allowedKeys) &&
+             scoresMap.get('wordScramble', 0) is number &&
+             scoresMap.get('dragDrop', 0) is number &&
+             scoresMap.get('misconception', 0) is number &&
+             scoresMap.get('spotDifference', 0) is number &&
+             scoresMap.get('waveLab', 0) is number &&
+             scoresMap.get('conceptCheck', 0) is number &&
+             scoresMap.get('assessment', 0) is number &&
+             scoresMap.get('exitTicket', 0) is number;
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string &&
+        dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    function isValidStudent(data) {
+      let requiredFields = ['uid', 'name', 'level', 'startedAt', 'scores', 'totalScore', 'lastActiveAt', 'currentStep', 'currentActivity'];
+      return data.keys().hasAll(requiredFields) &&
+             data.uid is string && data.uid == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 50 &&
+             data.level is string &&
+             isValidDateString(data.startedAt) &&
+             isValidDateString(data.lastActiveAt) &&
+             (!('completedAt' in data) || isValidDateString(data.completedAt)) &&
+             isValidScores(data.scores) &&
+             data.totalScore is number &&
+             data.currentStep is number &&
+             data.currentActivity is string;
+    }
+
+    match /students/{studentId} {
+      // Students can read their own data. Teachers can read all data.
+      allow read: if isOwner(studentId) || isTeacher();
+      
+      // Students can create their own record
+      allow create: if isOwner(studentId) && isValidStudent(request.resource.data);
+                       
+      // Students can update their own record
+      allow update: if isOwner(studentId) && isValidStudent(request.resource.data);
+                       
+      allow delete: if isTeacher();
+    }
+  }
+}

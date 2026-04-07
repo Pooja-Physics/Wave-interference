@@ -1,0 +1,70 @@
+{
+  "entities": {
+    "StudentProgress": {
+      "title": "StudentProgress",
+      "description": "Tracks a student's progress and scores through the interactive lesson.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The Firebase Auth UID of the student (anonymous or logged in)."
+        },
+        "name": {
+          "type": "string",
+          "description": "The display name entered by the student."
+        },
+        "level": {
+          "type": "string",
+          "description": "The calculated level of the student."
+        },
+        "currentStep": {
+          "type": "number",
+          "description": "The current step in the lesson (0-8)."
+        },
+        "currentActivity": {
+          "type": "string",
+          "description": "The name of the current activity."
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the student started the lesson."
+        },
+        "lastActiveAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The last time the student was active (heartbeat)."
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the student completed the lesson."
+        },
+        "scores": {
+          "type": "object",
+          "properties": {
+            "wordScramble": { "type": "number" },
+            "dragDrop": { "type": "number" },
+            "misconception": { "type": "number" },
+            "spotDifference": { "type": "number" },
+            "waveLab": { "type": "number" },
+            "conceptCheck": { "type": "number" },
+            "assessment": { "type": "number" },
+            "exitTicket": { "type": "number" }
+          }
+        },
+        "totalScore": {
+          "type": "number",
+          "description": "The total aggregated score."
+        }
+      },
+      "required": ["uid", "name", "startedAt", "scores", "totalScore", "level"]
+    }
+  },
+  "firestore": {
+    "/students/{studentId}": {
+      "schema": "StudentProgress",
+      "description": "Collection of student progress records."
+    }
+  }
+}
